@@ -7,7 +7,6 @@ import (
 
 func main() {
 	var p *ent.Player = ent.CreatePlayer()
-	ent.PrintStatus(*p)
 
 	rl.SetConfigFlags(rl.FlagWindowResizable)
 	rl.InitWindow(800, 800, "Test")
@@ -17,6 +16,7 @@ func main() {
 		rl.BeginDrawing()
 
 		ent.UpdatePlayer(p)
+		ent.PrintStatus(*p)
 
 		rl.ClearBackground(rl.Black)
 		rl.EndDrawing()

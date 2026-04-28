@@ -8,11 +8,13 @@ import (
 )
 
 type Player struct {
+	id    int16
 	pos_x float32
 	pos_y float32
 	size  float32
 
-	speed        float32
+	vel_x        float32
+	vel_y        float32
 	acceleration float32
 
 	max_speed      float32
@@ -26,14 +28,22 @@ type Player struct {
 
 func CreatePlayer() *Player {
 	var player Player = Player{
-		pos_x:          200.0,
-		pos_y:          200.0,
-		health:         3,
-		rotation_speed: 2.0,
-		speed:          200.0,
-		size:           30.0,
-		friction:       1.0,
-		angle:          0.0,
+		id:    0,
+		pos_x: 200,
+		pos_y: 200,
+		size:  20,
+
+		vel_x:        0,
+		vel_y:        0,
+		acceleration: 1000,
+
+		max_speed:      1000,
+		angle:          0,
+		rotation_speed: 3.0,
+
+		friction: 0.999,
+
+		health: 3,
 	}
 
 	return &player
@@ -45,29 +55,19 @@ func UpdatePlayer(player *Player) {
 }
 
 func PrintStatus(player Player) {
-	var message string = fmt.Sprintf(
-		"X: %f\nY: %f\nhealth: %d\nangle: %f",
-		player.pos_x,
-		player.pos_y,
-		player.health,
-		player.angle,
-	)
-
-	fmt.Println(message)
+	fmt.Println(player)
 }
 
 func movement(player *Player) {
+	rotatePlayer(player)
+
+	goFowardAndBackPlayer(player)
+
+	hitBorderMap(player)
+}
+
+func rotatePlayer(player *Player) {
 	dt := rl.GetFrameTime()
-
-	var foward float32 = 0
-
-	if rl.IsKeyDown(rl.KeyW) {
-		foward += 1
-	}
-
-	if rl.IsKeyDown(rl.KeyS) {
-		foward -= 1
-	}
 
 	if rl.IsKeyDown(rl.KeyA) {
 		player.angle -= player.rotation_speed * dt
@@ -76,12 +76,53 @@ func movement(player *Player) {
 	if rl.IsKeyDown(rl.KeyD) {
 		player.angle += player.rotation_speed * dt
 	}
+}
 
+func goFowardAndBackPlayer(player *Player) {
+	dt := rl.GetFrameTime()
 	dirX := float32(math.Cos(float64(player.angle)))
 	dirY := float32(math.Sin(float64(player.angle)))
 
-	player.pos_x += dirX * player.speed * foward * dt
-	player.pos_y += dirY * player.speed * foward * dt
+	if rl.IsKeyDown(rl.KeyW) {
+		player.vel_x += player.acceleration * dt
+		player.vel_y += player.acceleration * dt
+	}
+
+	if rl.IsKeyDown(rl.KeyS) {
+		player.vel_x -= player.acceleration * dt
+		player.vel_y -= player.acceleration * dt
+	}
+
+	player.vel_x *= player.friction
+	player.vel_y *= player.friction
+
+	speed := float32(math.Sqrt(float64(player.vel_x*player.vel_x + player.vel_y*player.pos_y)))
+
+	if speed > player.max_speed {
+		player.vel_x = (player.vel_x / speed) * player.max_speed
+		player.vel_y = (player.vel_y / speed) * player.max_speed
+	}
+
+	player.pos_x += dirX * player.vel_x * dt
+	player.pos_y += dirY * player.vel_y * dt
+}
+
+func hitBorderMap(player *Player) {
+	if player.pos_x < 0 {
+		player.pos_x = float32(rl.GetScreenWidth())
+	}
+
+	if player.pos_x > float32(rl.GetScreenWidth()) {
+		player.pos_x = 0.0
+	}
+
+	if player.pos_y < 0 {
+		player.pos_y = float32(rl.GetScreenHeight())
+	}
+
+	if player.pos_y > float32(rl.GetScreenHeight()) {
+		player.pos_y = 0.0
+	}
 }
 
 func drawPlayer(player Player) {
@@ -104,8 +145,6 @@ func drawPlayer(player Player) {
 	p1 := rotate(top)
 	p2 := rotate(left)
 	p3 := rotate(right)
-
-	fmt.Println(p1, p2, p3)
 
 	rl.DrawTriangle(p1, p2, p3, rl.White)
 }
